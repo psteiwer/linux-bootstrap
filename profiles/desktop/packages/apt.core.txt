@@ -1,0 +1,8 @@
+git
+curl
+wget
+htop
+ca-certificates
+gnupg
+software-properties-common
+build-essential

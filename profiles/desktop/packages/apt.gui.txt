@@ -1,0 +1,4 @@
+vlc
+gparted
+filelight
+fonts-firacode
