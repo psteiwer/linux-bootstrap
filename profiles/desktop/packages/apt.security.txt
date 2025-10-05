@@ -1,0 +1,6 @@
+pcscd
+pcsc-tools
+#sudo systemctl enable --now pcscd
+libccid
+yubikey-manager
+yubico-piv-tool

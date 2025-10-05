@@ -28,7 +28,7 @@ apply_layer() {
   if [[ "$OS_PKG" == "apt" ]]; then
     if [[ -d "$L/packages" ]]; then
       sudo apt-get update -y
-      for f in core dev gui; do
+      for f in core dev gui security; do
         LIST="$L/packages/apt.$f.txt"
         [[ -f "$LIST" ]] && grep -E '^[^#\s]+' "$LIST" | xargs -r sudo apt-get install -y --no-install-recommends
       done
