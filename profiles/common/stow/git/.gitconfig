@@ -1,9 +1,13 @@
 [user]
-    name = Your Name
-    email = your.email@example.com
-[core]
-    editor = vim
-[init]
-    defaultBranch = main
-[include]
-    path = ~/.gitconfig.local
+  name = Peter Steiwer
+  email = psteiwer@gmail.com
+  signingkey = ~/.ssh/id_ed25519_github
+
+[commit]
+  gpgsign = true
+
+[gpg]
+  format = ssh
+
+#[include]
+#  path = ~/.gitconfig.local
