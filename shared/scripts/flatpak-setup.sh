@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
-PKG_DIR="$DIR/../packages"
 LIST="$PKG_DIR/flatpak.txt"
 
 if ! command -v flatpak >/dev/null 2>&1; then
