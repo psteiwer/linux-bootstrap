@@ -15,6 +15,7 @@ It combines **packages**, **dotfiles (GNU Stow)**, **scripts**, and **systemd se
 sudo apt update && sudo apt install -y git unzip stow
 unzip bootstrap-profiles-v8-fixed2.zip
 cd bootstrap
+find . -type f -name "*.sh" -exec chmod +x {} \;
 ./install.sh            # prompts for PROFILE
 # or:
 PROFILE=desktop ./install.sh
