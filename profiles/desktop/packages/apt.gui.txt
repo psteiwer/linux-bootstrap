@@ -2,3 +2,5 @@ vlc
 gparted
 filelight
 fonts-firacode
+remmina
+remmina-plugin-rdp
