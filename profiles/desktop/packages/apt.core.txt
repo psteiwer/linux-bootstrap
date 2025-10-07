@@ -6,3 +6,4 @@ ca-certificates
 gnupg
 software-properties-common
 build-essential
+net-tools
