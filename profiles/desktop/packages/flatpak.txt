@@ -2,3 +2,4 @@ com.discordapp.Discord
 com.valvesoftware.Steam
 com.spotify.Client
 com.yubico.yubioath
+com.todoist.Todoist
