@@ -7,3 +7,4 @@ gnupg
 software-properties-common
 build-essential
 net-tools
+pulseaudio-module-bluetooth
