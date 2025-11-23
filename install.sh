@@ -25,6 +25,7 @@ apply_layer() {
   [[ ! -d "$L" ]] && return
 
   # 1) APT packages (supports grouped lists under packages/)
+  log "Starting APT packages"
   if [[ "$OS_PKG" == "apt" ]]; then
     if [[ -d "$L/packages" ]]; then
       sudo apt-get update -y
@@ -41,6 +42,7 @@ apply_layer() {
   fi
 
   # 2) pip/pipx packages
+  log "Starting pip packages"
   if [[ -f "$L/packages.pip.txt" ]]; then
     if command -v pipx >/dev/null 2>&1; then
       pipx install --requirement "$L/packages.pip.txt" || true
@@ -50,18 +52,43 @@ apply_layer() {
   fi
 
   # 3) scripts
-  if [[ -d "$L/scripts" ]]; then
+  log "Starting scripts"
+if [[ -d "$L/scripts" ]]; then
+    # Show how many we found
+    script_count=$(find "$L/scripts" -name '*.sh' -type f -executable | wc -l)
+    log "Found $script_count executable script(s) in $L/scripts/"
+
     for s in "$L/scripts"/*.sh; do
-      [[ -x "$s" ]] && "$s"
+        # Skip if glob didn't match anything
+        [[ -f "$s" ]] || continue
+
+        if [[ -x "$s" ]]; then
+            script_name="$(basename "$s")"
+            log "Running → $script_name"
+            "$s" || {
+                echo -e "\033[1;31m[bootstrap] ERROR: $script_name failed with exit code $?\033[0m" >&2
+                # Remove this line if you want the bootstrap to continue on failure
+                exit 1
+            }
+            log "Finished → $script_name"
+        else
+            log "Skipping (not executable) → $(basename "$s")"
+        fi
     done
-  fi
+else
+    log "No scripts directory found at $L/scripts"
+fi
+
+log "All scripts completed"
 
   # 4) dotfiles via GNU Stow
+  log "Starting stow"
   if [[ -d "$L/stow" ]]; then
     "$ROOT/tools/stow_all.sh" "$L/stow"
   fi
 
   # 5) services
+  log "Starting services"
   if [[ -d "$L/services" ]]; then
     sudo mkdir -p /etc/systemd/system
     sudo cp -f "$L/services/"*.service /etc/systemd/system/ || true
