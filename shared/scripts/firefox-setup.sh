@@ -15,8 +15,8 @@ check_status() {
 
 # Check if script is run with sudo privileges
 if [ "$EUID" -ne 0 ]; then
-    echo "This script must be run as root (use sudo)."
-    exit 1
+    echo "Skipping $(basename "$0") - requires root privileges"
+    exit 0
 fi
 
 # Step 1: Check if Firefox Snap is installed
@@ -59,21 +59,64 @@ echo "APT package lists updated successfully."
 
 # Step 6: Install Firefox via APT
 echo "Installing Firefox via APT..."
-sudo apt install firefox -y
+sudo apt install firefox -y --allow-downgrades
 check_status "Failed to install Firefox"
 echo "Firefox installed successfully."
 
 # Step 7: Configure AppArmor profile for Firefox to allow YubiKey access
-echo "Configuring AppArmor profile for Firefox YubiKey support..."
+echo "Configuring AppArmor profile for Firefox (YubiKey + 1Password)..."
+
 APPARMOR_LOCAL="/etc/apparmor.d/local/usr.bin.firefox"
-cat << EOF | sudo tee -a "$APPARMOR_LOCAL"
-# Allow Firefox to access YubiKey USB devices
-/dev/hidraw* rw,
-/sys/devices/**/hidraw* r,
-/run/udev/data/c204: r,
-/run/udev/data/+hid:busnum-* r,
+
+# Ensure the local profile directory exists
+sudo mkdir -p "$(dirname "$APPARMOR_LOCAL")"
+
+# -----------------------------------------------------------------
+# 1. YubiKey rules (your original ones – keep them verbatim)
+# -----------------------------------------------------------------
+YUBIKEY_RULES=$(cat <<'EOF'
+
+  # Allow Firefox to access YubiKey USB devices
+  /dev/hidraw* rw,
+  /sys/devices/**/hidraw* r,
+  /run/udev/data/c204: r,
+  /run/udev/data/+hid:busnum-* r,
 EOF
-check_status "Failed to update AppArmor profile for Firefox"
+)
+
+# -----------------------------------------------------------------
+# 2. 1Password native-messaging rules (only if 1Password is installed)
+# -----------------------------------------------------------------
+ONEPASSWD_RULES=""
+if command -v 1password >/dev/null 2>&1; then
+    # UID of the user that will run Firefox (usually the one who sudo-ed)
+    USER_UID=$(id -u "${SUDO_USER:-$USER}")
+    ONEPASSWD_RULES=$(cat <<EOF
+
+  # 1Password Browser Integration
+  owner @{HOME}/.mozilla/**/native-messaging-hosts/ r,
+  owner @{HOME}/.mozilla/**/native-messaging-hosts/** mr,
+  /opt/1Password/1Password-BrowserSupport mr,
+  /run/user/${USER_UID}/1Password-BrowserSupport.sock rw,
+EOF
+)
+fi
+
+# -----------------------------------------------------------------
+# 3. Remove any old copies of these blocks (makes script idempotent)
+# -----------------------------------------------------------------
+sudo sed -i '/# Allow Firefox to access YubiKey USB devices/,/busnum-\* r,/d' "$APPARMOR_LOCAL" 2>/dev/null || true
+sudo sed -i '/# 1Password Browser Integration/,/1Password-BrowserSupport.sock rw,/d' "$APPARMOR_LOCAL" 2>/dev/null || true
+
+# -----------------------------------------------------------------
+# 4. Append the fresh rules
+# -----------------------------------------------------------------
+{
+    [ -n "$YUBIKEY_RULES" ] && echo "$YUBIKEY_RULES"
+    [ -n "$ONEPASSWD_RULES" ] && echo "$ONEPASSWD_RULES"
+} | sudo tee -a "$APPARMOR_LOCAL" > /dev/null
+
+check_status "Failed to update AppArmor local profile for Firefox"
 
 # Step 8: Reload AppArmor profile
 echo "Reloading AppArmor profile..."
