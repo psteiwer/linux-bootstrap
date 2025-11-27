@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# File: setup-nas-mounts.sh
+# File: setup-nfs-mounts.sh
 # Drop this in your bootstrap repo – it replaces every previous script
 # Usage from any machine's bootstrap profile:
 #
-#   ./setup-nas-mounts.sh nas.lan /homes/alice        /nethome  "Documents Downloads Projects"
-#   ./setup-nas-mounts.sh nas.lan /volume1/media      /mnt/media
-#   ./setup-nas-mounts.sh nas.lan /volume1/backups    /mnt/backups
-#   ./setup-nas-mounts.sh nas.lan /homes/pi           /nethome  "Documents Music Videos"   # Raspberry Pi example
+#   ./setup-nfs-mounts.sh nas.lan /homes/alice        /nethome  "Documents Downloads Projects"
+#   ./setup-nfs-mounts.sh nas.lan /volume1/media      /mnt/media
+#   ./setup-nfs-mounts.sh nas.lan /volume1/backups    /mnt/backups
+#   ./setup-nfs-mounts.sh nas.lan /homes/pi           /nethome  "Documents Music Videos"   # Raspberry Pi example
 
 set -euo pipefail
 
@@ -24,10 +24,9 @@ sudo mkdir -p "$MOUNT_POINT"
 
 # ── Main NFS mount (uses printf + tab for perfect fstab formatting) ──
 if ! grep -q "^$NAS_HOST:$REMOTE_PATH[[:space:]]" /etc/fstab; then
-    printf '%s\t%s\t%s\t%s\t0 0\n' \
-           "$NAS_HOST:$REMOTE_PATH" "$MOUNT_POINT" "nfs" "$NFS_OPTS" \
-           | sudo tee -a /etc/fstab > /dev/null
-    echo "Added NFS mount to fstab"
+    printf '%s\t%s\tnfs\t%s\t0 0\n' "$NAS_HOST:$REMOTE_PATH" "$MOUNT_POINT" "$NFS_OPTS" \
+        | sudo tee -a /etc/fstab > /dev/null
+    echo "Added NFS mount"
 else
     echo "NFS line already exists"
 fi
@@ -38,18 +37,20 @@ if [[ -n "$BIND_FOLDERS" ]]; then
     for folder in $BIND_FOLDERS; do
         src="$MOUNT_POINT/$folder"
         dst="$USER_HOME/$folder"
-        sudo mkdir -p "$src"
-        mkdir -p "$dst"
-        if ! grep -q "$(printf '%s\t%s' "$src" "$dst")" /etc/fstab; then
-            printf '%s\t%s\tnone\tbind,defaults\t0 0\n' "$src" "$dst" \
-                | sudo tee -a /etc/fstab > /dev/null
-            echo "Bound ~/$folder"
-        fi
+        sudo mkdir -p "$src" "$dst"
+
+        sudo sed -i "\@^$src[[:space:]]@d" /etc/fstab 2>/dev/null || true
+        printf '%s\t%s\tnone\tbind,x-systemd.mount-options=local\t0 0\n' "$src" "$dst" \
+            | sudo tee -a /etc/fstab >/dev/null
     done
 fi
 
 # Mount everything now
+sudo systemctl daemon-reload
 sudo mount -a
+
+# Clear old thumbnail cache
+[[ -n "$BIND_FOLDERS" ]] && rm -rf ~/.cache/thumbnails/* 2>/dev/null || true
 
 echo "Done! Mounted $MOUNT_POINT"
 [[ -n "$BIND_FOLDERS" ]] && echo "Bound folders: $BIND_FOLDERS"
