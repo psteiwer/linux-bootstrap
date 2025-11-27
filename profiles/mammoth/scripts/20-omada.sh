@@ -5,7 +5,7 @@ cd /tmp
 wget https://repo.mongodb.org/apt/ubuntu/dists/focal/mongodb-org/4.4/multiverse/binary-arm64/mongodb-org-server_4.4.18_arm64.deb
 sudo apt install /tmp/mongodb-org-server_4.4.18_arm64.deb
 apt list curl
-sudo apt install openjdk-17-jre-headless
+sudo apt install openjdk-21-jdk-headless
 sudo apt install jsvc
 sudo update-alternatives --config java
 cd /tmp/
